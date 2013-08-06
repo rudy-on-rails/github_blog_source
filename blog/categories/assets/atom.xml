@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: assets | begin..rescue]]></title>
+  <link href="http://rudywseidinger.github.com/blog/categories/assets/atom.xml" rel="self"/>
+  <link href="http://rudywseidinger.github.com/"/>
+  <updated>2012-09-28T17:23:13-03:00</updated>
+  <id>http://rudywseidinger.github.com/</id>
+  <author>
+    <name><![CDATA[Rudy Seidinger Jr]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Usando o 'assets pipeline' + compressão de Javascript com AngularJS]]></title>
+    <link href="http://rudywseidinger.github.com/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/"/>
+    <updated>2012-09-20T12:55:00-03:00</updated>
+    <id>http://rudywseidinger.github.com/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs</id>
+    <content type="html"><![CDATA[<p>Se você, como eu, está recebendo o erro
+<code>
+Unknown provider: eProvider &lt;- e
+</code>
+ao fazer deploy de uma aplicação Rails usando Asset Pipeline + AngularJS, então muito provavelmente seus arquivo de configurações referente ao ambiente onde o deploy está sendo realizado contém a linha:
+<code>ruby
+config.assets.js_compressor = :uglifier
+</code></p>
+
+<p>Este erro acontece porquê a obfuscação que ocorre no processo de obfuscação usando o uglifier impede o AngularJS de realizar a identificação interna de DI (dependency injection).</p>
+
+<p>Para corrigir o problema, é simples. Basta trocar a linha mencionada acima por:</p>
+
+<p><code>ruby
+config.assets.js_compressor = Sprockets::LazyCompressor.new { Uglifier.new(:mangle =&gt; false) }
+</code>
+Isso vai impedir o obfuscador do unglifier de atuar sob nomes de variáveis e irá corrigir o problema.</p>
+]]></content>
+  </entry>
+  
+</feed>

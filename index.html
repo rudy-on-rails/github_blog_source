@@ -1,0 +1,584 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>begin..rescue</title>
+  <meta name="author" content="Rudy Seidinger Jr">
+
+  
+  <meta name="description" content="Muitas vezes, em um projeto em Rails, nos vemos encorajados a escrever parte da lógica da aplicação em nossos controllers. Talvez isso acontença, &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://rudywseidinger.github.com/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="begin..rescue" type="application/atom+xml">
+  <link href='http://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="logo">
+  	<div id="logoLeft">{</div>
+  	<div id="logoText">lambda</div>
+  	<div id="logoRight">}</div>
+  	<div class="clear"></div>
+  </div>
+  <h1><a href="/">begin..rescue</a></h1>
+  
+    <h2>Programar é legal pra %!$#%*&$!#%</h2>
+  
+  <div class="clear"></div>
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:rudywseidinger.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Procurar..."/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/about.html">About me</a></li>
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+        <h1 class="entry-title"><a href="/blog/2012/09/25/rails-controllers-x-domain-logic/">Rails - Controllers X Lógica De Domíno</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-09-25T20:10:00-03:00" pubdate data-updated="true">Sep 25<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Muitas vezes, em um projeto em Rails, nos vemos encorajados a escrever parte da lógica da aplicação em nossos controllers. Talvez isso acontença, principalmente, pelo fato da grande maioria dos exemplos existentes na internet e literatura (de Rails) não mostrar preocupação com a arquitetura da aplicação (até pelo foco nestes casos ser a tecnologia, em si).</p>
+
+<p>Acho que essa falta de precupação com design mais rico se justifica na maioria dos casos, onde a aplicação é pequena, o escopo do projeto é bem limitado ou existe uma necessidade imediata de lançar um produto ao público (como acontece em muitas startups - e nada impede um &#8216;refactoring&#8217; posterior, mas isto é outra estória&#8230;). Existem, porém, outros casos&#8230; Aplicações grandes, complexas ou onde a criticidade das informações é elevada, requerem cuidados maiores com o design da solução (ou não&#8230; dependendo de quão suicida o time for!).</p>
+
+<p>Após trabalhar em algumas aplicações grandes escritas em Rails (apps com mais de 15.000 linhas de código), muitas coisas que passariam despercebidas em alguns casos, tornam-se evidentes, principalmente quando modificações são necessárias:  implementação de nova funcionalidade, refactoring ou correção de bugs&#8230;</p>
+
+<p>Abaixo segue um exemplo de extração de objetos e lógica de domínio do controller:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">class</span> <span class="nc">PedidosController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">cancelar_pedido</span>
+</span><span class='line'>      <span class="vi">@pedido</span>  <span class="o">=</span> <span class="no">Pedido</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>      <span class="vi">@estoque</span> <span class="o">=</span> <span class="no">Estoque</span><span class="o">.</span><span class="n">find_by_loja</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:loja_id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>      <span class="vi">@pedido</span><span class="o">.</span><span class="n">data_cancelamento</span> <span class="o">=</span> <span class="no">Date</span><span class="o">.</span><span class="n">today</span>
+</span><span class='line'>      <span class="vi">@pedido</span><span class="o">.</span><span class="n">save</span>
+</span><span class='line'>      <span class="no">GatewayDePagamento</span><span class="o">.</span><span class="n">estornar_pagamento</span><span class="p">(</span><span class="vi">@pedido</span><span class="o">.</span><span class="n">pagamento</span><span class="p">)</span> <span class="k">if</span> <span class="vi">@pedido</span><span class="o">.</span><span class="n">pagamento</span>
+</span><span class='line'>      <span class="vi">@estoque</span><span class="o">.</span><span class="n">estornar_estoque_por_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>      <span class="no">NotificacaoDeUsuarios</span><span class="o">.</span><span class="n">notificar_cancelamento_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span> <span class="c1">#classe que herda de ActionMailer::Base</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>O principal problema existente neste controller é que ele, enquanto camada de parte da camada de visualização, têm conhecimento de como aplicar uma regra de negócio (além de outros problemas de design, como testabilidade, violação SOLID, enfim, este não é o foco no post).</p>
+
+<p>A &#8216;regra de negócio&#8217;, enquanto parte de maior importância no sistema, devia estar isolada, independente de como é implementada sua parte &#8220;visual&#8221;.</p>
+
+<p>Imagine, neste cenário, que será necessário fornecer esta mesma funcionalidade via WebService SOAP. É fácil copiar e colar este código no &#8220;handle&#8221; do request via SOAP, não?!?
+É fácil até que exista um novo requerimento ou que seja necessário uma adição/modificação do que existe.  Por exemplo, surge a necessidade de que pedidos cancelados devem notificar o departamento de vendas&#8230;
+2 lugares para modificar, maiores as chances de que algo seja esquecido no caminho, fora os outros problemas anteriormente descritos&#8230;</p>
+
+<p>Então, para evitar estes problemas, podemos seguir a seguinte abordagem:</p>
+
+<p>1) Extraímos a lógica de cancelamento e notificação para um objeto (&#8220;Domain Service&#8221;, se quisermos definir assim, segundo concepções do DDD):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">CancelamentoDePedidos</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">pedido</span><span class="p">,</span> <span class="n">estoque</span><span class="p">,</span> <span class="n">gateway_pagamento</span><span class="o">=</span><span class="no">GatewayDePagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@pedido</span> <span class="o">=</span> <span class="n">pedido</span>
+</span><span class='line'>    <span class="vi">@estoque</span> <span class="o">=</span> <span class="n">estoque</span>
+</span><span class='line'>    <span class="vi">@gateway_pagamento</span> <span class="o">=</span> <span class="n">gateway_pagamento</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">proceder_com_cancelamento</span>
+</span><span class='line'>    <span class="c1">#os dois métodos abaixo em Pedido serão descritos logo mais</span>
+</span><span class='line'>    <span class="vi">@pedido</span><span class="o">.</span><span class="n">cancelar</span>
+</span><span class='line'>    <span class="vi">@pedido</span><span class="o">.</span><span class="n">estornar_pagamento_usando</span><span class="p">(</span><span class="vi">@gateway_pagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@estoque</span><span class="o">.</span><span class="n">estornar_estoque_por_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>    <span class="c1"># A decisão de manter este código no serviço vai depender de </span>
+</span><span class='line'>    <span class="c1"># quão importante é para o caso de uso de &quot;Cancelar Pedido&quot;</span>
+</span><span class='line'>    <span class="c1"># esta notificação. Neste caso, trata-se como parte fundamental </span>
+</span><span class='line'>    <span class="c1"># dele</span>
+</span><span class='line'>    <span class="no">NotificacaoDeUsuarios</span><span class="o">.</span><span class="n">notificar_cancelamento_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>
+2) Adicionamos a manipulação dos atributos internos relativos ao cancelamento de pedidos ao próprio pedido, que deveria ter este conhecimento.:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Pedido</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">cancelar</span>
+</span><span class='line'>    <span class="nb">self</span><span class="o">.</span><span class="n">data_cancelamento</span> <span class="o">=</span> <span class="no">Date</span><span class="o">.</span><span class="n">today</span>
+</span><span class='line'>    <span class="nb">self</span><span class="o">.</span><span class="n">save</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">estornar_pagamento_usando</span><span class="p">(</span><span class="n">gateway_pagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">gateway_pagamento</span><span class="o">.</span><span class="n">estornar_pagamento</span><span class="p">(</span><span class="nb">self</span><span class="o">.</span><span class="n">pagamento</span><span class="p">)</span> <span class="k">if</span> <span class="n">esta_pago?</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">esta_pago?</span>
+</span><span class='line'>    <span class="o">!</span><span class="n">pagamento</span><span class="o">.</span><span class="n">nil?</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p></p>
+
+<p>3) Por último, modificamos nosso controller:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">PedidosController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">cancelar_pedido</span>
+</span><span class='line'>    <span class="vi">@pedido</span>  <span class="o">=</span> <span class="no">Pedido</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@estoque</span> <span class="o">=</span> <span class="no">Estoque</span><span class="o">.</span><span class="n">find_by_loja</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:loja_id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="no">CancelamentoDePedidos</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">,</span> <span class="vi">@estoque</span><span class="p">)</span><span class="o">.</span><span class="n">proceder_com_cancelamento</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Acho que a idéia é mais ou menos essa&#8230; Com esse pequeno (e fácil!) refactoring do controller, explicitamos o caso de uso mencioando e nosso controller passa a ser somente um consumidor de nossa API para cancelamento de pedidos!!! Parece razoável (apesar de ainda ser possível melhorar isso)&#8230;</p>
+
+<p>O livro do Eric Evans - &#8220;Domain Driven Design - tackling complexity in the heart of software&#8221; é, na minha opinião, um livro um pouco difícil de ser lido e &#8220;digerido&#8221;, porém consegue fornecer um insumo suficiente para desenvolver software com um &#8220;mindset&#8221; que prima a representação em código do negócio de nossos clientes.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+        <h1 class="entry-title"><a href="/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/">Usando O &#8216;Assets Pipeline&#8217; + Compressão De Javascript Com AngularJS</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-09-20T12:55:00-03:00" pubdate data-updated="true">Sep 20<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Se você, como eu, está recebendo o erro</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Unknown provider: eProvider &lt;- e</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ao fazer deploy de uma aplicação Rails usando Asset Pipeline + AngularJS, então muito provavelmente seus arquivo de configurações referente ao ambiente onde o deploy está sendo realizado contém a linha:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">js_compressor</span> <span class="o">=</span> <span class="ss">:uglifier</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Este erro acontece porquê a obfuscação que ocorre no processo de obfuscação usando o uglifier impede o AngularJS de realizar a identificação interna de DI (dependency injection).</p>
+
+<p>Para corrigir o problema, é simples. Basta trocar a linha mencionada acima por:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">js_compressor</span> <span class="o">=</span> <span class="no">Sprockets</span><span class="o">::</span><span class="no">LazyCompressor</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span> <span class="no">Uglifier</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:mangle</span> <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">)</span> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Isso vai impedir o obfuscador do unglifier de atuar sob nomes de variáveis e irá corrigir o problema.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+        <h1 class="entry-title"><a href="/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/">Sobrevivendo Ao Mundo GIT - 1</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-08-29T20:10:00-03:00" pubdate data-updated="true">Aug 29<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Algumas vezes no processo diário de desenvolvimento e versionamento dos nossos fontes, nos vemos em situações nas quais temos que lidar com o GIT para realizar algumas tarefas não tanto usuais.</p>
+
+<p>Neste post e alguns no futuro, pretendo mostrar como procedo em alguns destes casos:</p>
+
+<h3>Puts&#8230; Errei a mensagem de commit! Como faço para trocá-la?</h3>
+
+
+<p>Tranquilo!</p>
+
+<p>Se o seu commit foi o último realizado no branch local, simplesmente use:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git commit --amend -m "nova mensagem"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Se quer trocar a mensagem de outros commits, use:
+(assumindo que você possui um editor padrão configurado no ~/.gitconfig)</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git reabase -i SHA_DO_COMMIT_ANTERIOR_AO_QUE_SE_DESEJA_EDITAR_A_MENSAGEM</span></code></pre></td></tr></table></div></figure>
+
+
+<p>O &#8220;-i&#8221; acima representa o modo interativo, onde o GIT permite controle manual sob o processo de rebase (em breve tentarei postar algo mais profundo sobre o rebase).</p>
+
+<p>Bom, após executar o comando, será exibida uma tela como esta, onde será possível, dentre outras coisas, trocar a mensagem do commit desejado:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>pick f318e91 Implementando filtro anual 
+</span><span class='line'>pick 582a73e Implementando componente de filtro de intervalo de datas
+</span><span class='line'>
+</span><span class='line'># Rebase a9fda57..582a73e onto a9fda57
+</span><span class='line'>#
+</span><span class='line'># Commands:
+</span><span class='line'>#  p, pick = use commit
+</span><span class='line'>#  r, reword = use commit, but edit the commit message
+</span><span class='line'>#  e, edit = use commit, but stop for amending
+</span><span class='line'>#  s, squash = use commit, but meld into previous commit
+</span><span class='line'>#  f, fixup = like "squash", but discard this commit's log message
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Basta modificar a opção <strong>pick</strong> por <strong>reword</strong> ou <strong>r</strong> para cada commit que se deseja editar a mensagem, salvar o arquivo e fechar o editor.</p>
+
+<p>Feito isso, será aberto um arquivo para cada commit apontado anteriormente com o comando &#8216;reword&#8217;, exibindo a tela para edição no formato abaixo (supondo que selecionei o comando para &#8216;reword&#8217; do primeiro commit acima):</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Implementando componente de filtro de intervalo de datas
+</span><span class='line'>
+</span><span class='line'># Please enter the commit message for your changes. Lines starting
+</span><span class='line'># with '#' will be ignored, and an empty message aborts the commit.
+</span><span class='line'># Not currently on any branch.
+</span><span class='line'># Changes to be committed:
+</span><span class='line'>#   (use "git reset HEAD^1 &lt;file&gt;..." to unstage)
+</span><span class='line'>#</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Aí, basta editar a mensagem, salvar novamente e sair e as alterações serão aplicadas em nível de branch local.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <!-- Now we're back to normal posts. Note the links used under href in both headers.-->
+        <h1 class="entry-title"><a href="/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot/">Cause Everything Starts From Something&#8230;</a></h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-08-09T18:16:00-03:00" pubdate data-updated="true">Aug 9<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Since 2006, the year i&#8217;ve started working with programming, i&#8217;ve being wondering about creating a blog.</p>
+
+<p>The idea is just to write anything (interesting, of course) that i&#8217;m studying, learning or working with. That will be a great way to strategically organize ideas inside my head and express them in a straightforward way another human being (i supose) can understand.</p>
+
+<p>Well, soon i&#8217;ll start with something that is on my mind&#8230;</p>
+
+<hr>
+
+
+<p><strong>Só uma atualização&#8230;</strong>
+Resolvi largar essa idéia de escrever em inglês&#8230; Em um lampejo de pensamento, esqueci-me que o propósito de escrever é meramente uma forma de recordação e registro de idéias e, para isso, nada melhor que o idioma nativo&#8230;</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2012/09/25/rails-controllers-x-domain-logic/">Rails - Controllers x Lógica de domíno</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/">Usando o &#8216;assets pipeline&#8217; + compressão de Javascript com AngularJS</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/">Sobrevivendo ao mundo GIT - 1</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot/">Cause everything starts from something&#8230;</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2012 - <a href="http://github.com/rudywseidinger">Rudy Seidinger Jr</a> -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-33979185-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+</body>
+</html>

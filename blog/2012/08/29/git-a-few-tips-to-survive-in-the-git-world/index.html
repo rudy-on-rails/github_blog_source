@@ -1,0 +1,310 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Sobrevivendo ao mundo GIT - 1 - begin..rescue</title>
+  <meta name="author" content="Rudy Seidinger Jr">
+
+  
+  <meta name="description" content="Algumas vezes no processo diário de desenvolvimento e versionamento dos nossos fontes, nos vemos em situações nas quais temos que lidar com o GIT &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://rudywseidinger.github.com/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="begin..rescue" type="application/atom+xml">
+  <link href='http://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="logo">
+  	<div id="logoLeft">{</div>
+  	<div id="logoText">lambda</div>
+  	<div id="logoRight">}</div>
+  	<div class="clear"></div>
+  </div>
+  <h1><a href="/">begin..rescue</a></h1>
+  
+    <h2>Programar é legal pra %!$#%*&$!#%</h2>
+  
+  <div class="clear"></div>
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:rudywseidinger.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Procurar..."/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/about.html">About me</a></li>
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+        <h1 class="entry-title">Sobrevivendo Ao Mundo GIT - 1</h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-08-29T20:10:00-03:00" pubdate data-updated="true">Aug 29<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Algumas vezes no processo diário de desenvolvimento e versionamento dos nossos fontes, nos vemos em situações nas quais temos que lidar com o GIT para realizar algumas tarefas não tanto usuais.</p>
+
+<p>Neste post e alguns no futuro, pretendo mostrar como procedo em alguns destes casos:</p>
+
+<h3>Puts&#8230; Errei a mensagem de commit! Como faço para trocá-la?</h3>
+
+
+<p>Tranquilo!</p>
+
+<p>Se o seu commit foi o último realizado no branch local, simplesmente use:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git commit --amend -m "nova mensagem"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Se quer trocar a mensagem de outros commits, use:
+(assumindo que você possui um editor padrão configurado no ~/.gitconfig)</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git reabase -i SHA_DO_COMMIT_ANTERIOR_AO_QUE_SE_DESEJA_EDITAR_A_MENSAGEM</span></code></pre></td></tr></table></div></figure>
+
+
+<p>O &#8220;-i&#8221; acima representa o modo interativo, onde o GIT permite controle manual sob o processo de rebase (em breve tentarei postar algo mais profundo sobre o rebase).</p>
+
+<p>Bom, após executar o comando, será exibida uma tela como esta, onde será possível, dentre outras coisas, trocar a mensagem do commit desejado:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>pick f318e91 Implementando filtro anual 
+</span><span class='line'>pick 582a73e Implementando componente de filtro de intervalo de datas
+</span><span class='line'>
+</span><span class='line'># Rebase a9fda57..582a73e onto a9fda57
+</span><span class='line'>#
+</span><span class='line'># Commands:
+</span><span class='line'>#  p, pick = use commit
+</span><span class='line'>#  r, reword = use commit, but edit the commit message
+</span><span class='line'>#  e, edit = use commit, but stop for amending
+</span><span class='line'>#  s, squash = use commit, but meld into previous commit
+</span><span class='line'>#  f, fixup = like "squash", but discard this commit's log message
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Basta modificar a opção <strong>pick</strong> por <strong>reword</strong> ou <strong>r</strong> para cada commit que se deseja editar a mensagem, salvar o arquivo e fechar o editor.</p>
+
+<p>Feito isso, será aberto um arquivo para cada commit apontado anteriormente com o comando &#8216;reword&#8217;, exibindo a tela para edição no formato abaixo (supondo que selecionei o comando para &#8216;reword&#8217; do primeiro commit acima):</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Implementando componente de filtro de intervalo de datas
+</span><span class='line'>
+</span><span class='line'># Please enter the commit message for your changes. Lines starting
+</span><span class='line'># with '#' will be ignored, and an empty message aborts the commit.
+</span><span class='line'># Not currently on any branch.
+</span><span class='line'># Changes to be committed:
+</span><span class='line'>#   (use "git reset HEAD^1 &lt;file&gt;..." to unstage)
+</span><span class='line'>#</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Aí, basta editar a mensagem, salvar novamente e sair e as alterações serão aplicadas em nível de branch local.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">By <span class="fn">Rudy Seidinger Jr</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-08-29T20:10:00-03:00" pubdate data-updated="true">Aug 29<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/change-commits-message/'>change commits message</a>, <a class='category' href='/blog/categories/git/'>git</a>, <a class='category' href='/blog/categories/git-tips/'>git tips</a>, <a class='category' href='/blog/categories/trocando-mensagem-de-commits/'>trocando mensagem de commits</a>, <a class='category' href='/blog/categories/truques-git/'>truques git</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://rudywseidinger.github.com/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/" data-via="" data-counturl="http://rudywseidinger.github.com/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left articlenav" href="/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot/" title="Previous Post: Cause everything starts from something...">&laquo; Cause everything starts from something...</a>
+      
+      
+        <a class="basic-alignment right articlenav" href="/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/" title="Next Post: Usando o 'assets pipeline' + compressão de Javascript com AngularJS">Usando o 'assets pipeline' + compressão de Javascript com AngularJS &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2012/09/25/rails-controllers-x-domain-logic/">Rails - Controllers x Lógica de domíno</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/">Usando o 'assets pipeline' + compressão de Javascript com AngularJS</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/">Sobrevivendo ao mundo GIT - 1</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot/">Cause everything starts from something...</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2012 - <a href="http://github.com/rudywseidinger">Rudy Seidinger Jr</a> -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-33979185-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[begin..rescue]]></title>
+  <link href="http://rudywseidinger.github.com/atom.xml" rel="self"/>
+  <link href="http://rudywseidinger.github.com/"/>
+  <updated>2012-09-28T17:23:13-03:00</updated>
+  <id>http://rudywseidinger.github.com/</id>
+  <author>
+    <name><![CDATA[Rudy Seidinger Jr]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Rails - Controllers x Lógica de domíno]]></title>
+    <link href="http://rudywseidinger.github.com/blog/2012/09/25/rails-controllers-x-domain-logic/"/>
+    <updated>2012-09-25T20:10:00-03:00</updated>
+    <id>http://rudywseidinger.github.com/blog/2012/09/25/rails-controllers-x-domain-logic</id>
+    <content type="html"><![CDATA[<p>Muitas vezes, em um projeto em Rails, nos vemos encorajados a escrever parte da lógica da aplicação em nossos controllers. Talvez isso acontença, principalmente, pelo fato da grande maioria dos exemplos existentes na internet e literatura (de Rails) não mostrar preocupação com a arquitetura da aplicação (até pelo foco nestes casos ser a tecnologia, em si).</p>
+
+<p>Acho que essa falta de precupação com design mais rico se justifica na maioria dos casos, onde a aplicação é pequena, o escopo do projeto é bem limitado ou existe uma necessidade imediata de lançar um produto ao público (como acontece em muitas startups - e nada impede um &#8216;refactoring&#8217; posterior, mas isto é outra estória&#8230;). Existem, porém, outros casos&#8230; Aplicações grandes, complexas ou onde a criticidade das informações é elevada, requerem cuidados maiores com o design da solução (ou não&#8230; dependendo de quão suicida o time for!).</p>
+
+<p>Após trabalhar em algumas aplicações grandes escritas em Rails (apps com mais de 15.000 linhas de código), muitas coisas que passariam despercebidas em alguns casos, tornam-se evidentes, principalmente quando modificações são necessárias:  implementação de nova funcionalidade, refactoring ou correção de bugs&#8230;</p>
+
+<p>Abaixo segue um exemplo de extração de objetos e lógica de domínio do controller:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">class</span> <span class="nc">PedidosController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">cancelar_pedido</span>
+</span><span class='line'>      <span class="vi">@pedido</span>  <span class="o">=</span> <span class="no">Pedido</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>      <span class="vi">@estoque</span> <span class="o">=</span> <span class="no">Estoque</span><span class="o">.</span><span class="n">find_by_loja</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:loja_id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>      <span class="vi">@pedido</span><span class="o">.</span><span class="n">data_cancelamento</span> <span class="o">=</span> <span class="no">Date</span><span class="o">.</span><span class="n">today</span>
+</span><span class='line'>      <span class="vi">@pedido</span><span class="o">.</span><span class="n">save</span>
+</span><span class='line'>      <span class="no">GatewayDePagamento</span><span class="o">.</span><span class="n">estornar_pagamento</span><span class="p">(</span><span class="vi">@pedido</span><span class="o">.</span><span class="n">pagamento</span><span class="p">)</span> <span class="k">if</span> <span class="vi">@pedido</span><span class="o">.</span><span class="n">pagamento</span>
+</span><span class='line'>      <span class="vi">@estoque</span><span class="o">.</span><span class="n">estornar_estoque_por_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>      <span class="no">NotificacaoDeUsuarios</span><span class="o">.</span><span class="n">notificar_cancelamento_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span> <span class="c1">#classe que herda de ActionMailer::Base</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>O principal problema existente neste controller é que ele, enquanto camada de parte da camada de visualização, têm conhecimento de como aplicar uma regra de negócio (além de outros problemas de design, como testabilidade, violação SOLID, enfim, este não é o foco no post).</p>
+
+<p>A &#8216;regra de negócio&#8217;, enquanto parte de maior importância no sistema, devia estar isolada, independente de como é implementada sua parte &#8220;visual&#8221;.</p>
+
+<p>Imagine, neste cenário, que será necessário fornecer esta mesma funcionalidade via WebService SOAP. É fácil copiar e colar este código no &#8220;handle&#8221; do request via SOAP, não?!?
+É fácil até que exista um novo requerimento ou que seja necessário uma adição/modificação do que existe.  Por exemplo, surge a necessidade de que pedidos cancelados devem notificar o departamento de vendas&#8230;
+2 lugares para modificar, maiores as chances de que algo seja esquecido no caminho, fora os outros problemas anteriormente descritos&#8230;</p>
+
+<p>Então, para evitar estes problemas, podemos seguir a seguinte abordagem:</p>
+
+<p>1) Extraímos a lógica de cancelamento e notificação para um objeto (&#8220;Domain Service&#8221;, se quisermos definir assim, segundo concepções do DDD):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">CancelamentoDePedidos</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">pedido</span><span class="p">,</span> <span class="n">estoque</span><span class="p">,</span> <span class="n">gateway_pagamento</span><span class="o">=</span><span class="no">GatewayDePagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@pedido</span> <span class="o">=</span> <span class="n">pedido</span>
+</span><span class='line'>    <span class="vi">@estoque</span> <span class="o">=</span> <span class="n">estoque</span>
+</span><span class='line'>    <span class="vi">@gateway_pagamento</span> <span class="o">=</span> <span class="n">gateway_pagamento</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">proceder_com_cancelamento</span>
+</span><span class='line'>    <span class="c1">#os dois métodos abaixo em Pedido serão descritos logo mais</span>
+</span><span class='line'>    <span class="vi">@pedido</span><span class="o">.</span><span class="n">cancelar</span>
+</span><span class='line'>    <span class="vi">@pedido</span><span class="o">.</span><span class="n">estornar_pagamento_usando</span><span class="p">(</span><span class="vi">@gateway_pagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@estoque</span><span class="o">.</span><span class="n">estornar_estoque_por_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>    <span class="c1"># A decisão de manter este código no serviço vai depender de </span>
+</span><span class='line'>    <span class="c1"># quão importante é para o caso de uso de &quot;Cancelar Pedido&quot;</span>
+</span><span class='line'>    <span class="c1"># esta notificação. Neste caso, trata-se como parte fundamental </span>
+</span><span class='line'>    <span class="c1"># dele</span>
+</span><span class='line'>    <span class="no">NotificacaoDeUsuarios</span><span class="o">.</span><span class="n">notificar_cancelamento_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>
+2) Adicionamos a manipulação dos atributos internos relativos ao cancelamento de pedidos ao próprio pedido, que deveria ter este conhecimento.:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Pedido</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">cancelar</span>
+</span><span class='line'>    <span class="nb">self</span><span class="o">.</span><span class="n">data_cancelamento</span> <span class="o">=</span> <span class="no">Date</span><span class="o">.</span><span class="n">today</span>
+</span><span class='line'>    <span class="nb">self</span><span class="o">.</span><span class="n">save</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">estornar_pagamento_usando</span><span class="p">(</span><span class="n">gateway_pagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">gateway_pagamento</span><span class="o">.</span><span class="n">estornar_pagamento</span><span class="p">(</span><span class="nb">self</span><span class="o">.</span><span class="n">pagamento</span><span class="p">)</span> <span class="k">if</span> <span class="n">esta_pago?</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">esta_pago?</span>
+</span><span class='line'>    <span class="o">!</span><span class="n">pagamento</span><span class="o">.</span><span class="n">nil?</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p></p>
+
+<p>3) Por último, modificamos nosso controller:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">PedidosController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">cancelar_pedido</span>
+</span><span class='line'>    <span class="vi">@pedido</span>  <span class="o">=</span> <span class="no">Pedido</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@estoque</span> <span class="o">=</span> <span class="no">Estoque</span><span class="o">.</span><span class="n">find_by_loja</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:loja_id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="no">CancelamentoDePedidos</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">,</span> <span class="vi">@estoque</span><span class="p">)</span><span class="o">.</span><span class="n">proceder_com_cancelamento</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Acho que a idéia é mais ou menos essa&#8230; Com esse pequeno (e fácil!) refactoring do controller, explicitamos o caso de uso mencioando e nosso controller passa a ser somente um consumidor de nossa API para cancelamento de pedidos!!! Parece razoável (apesar de ainda ser possível melhorar isso)&#8230;</p>
+
+<p>O livro do Eric Evans - &#8220;Domain Driven Design - tackling complexity in the heart of software&#8221; é, na minha opinião, um livro um pouco difícil de ser lido e &#8220;digerido&#8221;, porém consegue fornecer um insumo suficiente para desenvolver software com um &#8220;mindset&#8221; que prima a representação em código do negócio de nossos clientes.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Usando o 'assets pipeline' + compressão de Javascript com AngularJS]]></title>
+    <link href="http://rudywseidinger.github.com/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/"/>
+    <updated>2012-09-20T12:55:00-03:00</updated>
+    <id>http://rudywseidinger.github.com/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs</id>
+    <content type="html"><![CDATA[<p>Se você, como eu, está recebendo o erro</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Unknown provider: eProvider &lt;- e</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ao fazer deploy de uma aplicação Rails usando Asset Pipeline + AngularJS, então muito provavelmente seus arquivo de configurações referente ao ambiente onde o deploy está sendo realizado contém a linha:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">js_compressor</span> <span class="o">=</span> <span class="ss">:uglifier</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Este erro acontece porquê a obfuscação que ocorre no processo de obfuscação usando o uglifier impede o AngularJS de realizar a identificação interna de DI (dependency injection).</p>
+
+<p>Para corrigir o problema, é simples. Basta trocar a linha mencionada acima por:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">js_compressor</span> <span class="o">=</span> <span class="no">Sprockets</span><span class="o">::</span><span class="no">LazyCompressor</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span> <span class="no">Uglifier</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:mangle</span> <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">)</span> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Isso vai impedir o obfuscador do unglifier de atuar sob nomes de variáveis e irá corrigir o problema.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Sobrevivendo ao mundo GIT - 1]]></title>
+    <link href="http://rudywseidinger.github.com/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/"/>
+    <updated>2012-08-29T20:10:00-03:00</updated>
+    <id>http://rudywseidinger.github.com/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world</id>
+    <content type="html"><![CDATA[<p>Algumas vezes no processo diário de desenvolvimento e versionamento dos nossos fontes, nos vemos em situações nas quais temos que lidar com o GIT para realizar algumas tarefas não tanto usuais.</p>
+
+<p>Neste post e alguns no futuro, pretendo mostrar como procedo em alguns destes casos:</p>
+
+<h3>Puts&#8230; Errei a mensagem de commit! Como faço para trocá-la?</h3>
+
+
+<p>Tranquilo!</p>
+
+<p>Se o seu commit foi o último realizado no branch local, simplesmente use:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git commit --amend -m "nova mensagem"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Se quer trocar a mensagem de outros commits, use:
+(assumindo que você possui um editor padrão configurado no ~/.gitconfig)</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git reabase -i SHA_DO_COMMIT_ANTERIOR_AO_QUE_SE_DESEJA_EDITAR_A_MENSAGEM</span></code></pre></td></tr></table></div></figure>
+
+
+<p>O &#8220;-i&#8221; acima representa o modo interativo, onde o GIT permite controle manual sob o processo de rebase (em breve tentarei postar algo mais profundo sobre o rebase).</p>
+
+<p>Bom, após executar o comando, será exibida uma tela como esta, onde será possível, dentre outras coisas, trocar a mensagem do commit desejado:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>pick f318e91 Implementando filtro anual 
+</span><span class='line'>pick 582a73e Implementando componente de filtro de intervalo de datas
+</span><span class='line'>
+</span><span class='line'># Rebase a9fda57..582a73e onto a9fda57
+</span><span class='line'>#
+</span><span class='line'># Commands:
+</span><span class='line'>#  p, pick = use commit
+</span><span class='line'>#  r, reword = use commit, but edit the commit message
+</span><span class='line'>#  e, edit = use commit, but stop for amending
+</span><span class='line'>#  s, squash = use commit, but meld into previous commit
+</span><span class='line'>#  f, fixup = like "squash", but discard this commit's log message
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Basta modificar a opção <strong>pick</strong> por <strong>reword</strong> ou <strong>r</strong> para cada commit que se deseja editar a mensagem, salvar o arquivo e fechar o editor.</p>
+
+<p>Feito isso, será aberto um arquivo para cada commit apontado anteriormente com o comando &#8216;reword&#8217;, exibindo a tela para edição no formato abaixo (supondo que selecionei o comando para &#8216;reword&#8217; do primeiro commit acima):</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Implementando componente de filtro de intervalo de datas
+</span><span class='line'>
+</span><span class='line'># Please enter the commit message for your changes. Lines starting
+</span><span class='line'># with '#' will be ignored, and an empty message aborts the commit.
+</span><span class='line'># Not currently on any branch.
+</span><span class='line'># Changes to be committed:
+</span><span class='line'>#   (use "git reset HEAD^1 &lt;file&gt;..." to unstage)
+</span><span class='line'>#</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Aí, basta editar a mensagem, salvar novamente e sair e as alterações serão aplicadas em nível de branch local.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Cause everything starts from something...]]></title>
+    <link href="http://rudywseidinger.github.com/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot/"/>
+    <updated>2012-08-09T18:16:00-03:00</updated>
+    <id>http://rudywseidinger.github.com/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot</id>
+    <content type="html"><![CDATA[<p>Since 2006, the year i&#8217;ve started working with programming, i&#8217;ve being wondering about creating a blog.</p>
+
+<p>The idea is just to write anything (interesting, of course) that i&#8217;m studying, learning or working with. That will be a great way to strategically organize ideas inside my head and express them in a straightforward way another human being (i supose) can understand.</p>
+
+<p>Well, soon i&#8217;ll start with something that is on my mind&#8230;</p>
+
+<hr>
+
+
+<p><strong>Só uma atualização&#8230;</strong>
+Resolvi largar essa idéia de escrever em inglês&#8230; Em um lampejo de pensamento, esqueci-me que o propósito de escrever é meramente uma forma de recordação e registro de idéias e, para isso, nada melhor que o idioma nativo&#8230;</p>
+]]></content>
+  </entry>
+  
+</feed>

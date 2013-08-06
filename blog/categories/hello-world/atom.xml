@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: hello world | begin..rescue]]></title>
+  <link href="http://rudywseidinger.github.com/blog/categories/hello-world/atom.xml" rel="self"/>
+  <link href="http://rudywseidinger.github.com/"/>
+  <updated>2012-09-28T17:23:13-03:00</updated>
+  <id>http://rudywseidinger.github.com/</id>
+  <author>
+    <name><![CDATA[Rudy Seidinger Jr]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Cause everything starts from something...]]></title>
+    <link href="http://rudywseidinger.github.com/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot/"/>
+    <updated>2012-08-09T18:16:00-03:00</updated>
+    <id>http://rudywseidinger.github.com/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot</id>
+    <content type="html"><![CDATA[<p>Since 2006, the year i've started working with programming, i've being wondering about creating a blog.</p>
+
+<p>The idea is just to write anything (interesting, of course) that i'm studying, learning or working with. That will be a great way to strategically organize ideas inside my head and express them in a straightforward way another human being (i supose) can understand.</p>
+
+<p>Well, soon i'll start with something that is on my mind...</p>
+
+<hr>
+
+
+<p><strong>Só uma atualização...</strong>
+Resolvi largar essa idéia de escrever em inglês... Em um lampejo de pensamento, esqueci-me que o propósito de escrever é meramente uma forma de recordação e registro de idéias e, para isso, nada melhor que o idioma nativo...</p>
+]]></content>
+  </entry>
+  
+</feed>

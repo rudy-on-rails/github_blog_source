@@ -1,0 +1,404 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Rails - Controllers x Lógica de domíno - begin..rescue</title>
+  <meta name="author" content="Rudy Seidinger Jr">
+
+  
+  <meta name="description" content="Muitas vezes, em um projeto em Rails, nos vemos encorajados a escrever parte da lógica da aplicação em nossos controllers. Talvez isso acontença, &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://rudywseidinger.github.com/blog/2012/09/25/rails-controllers-x-domain-logic/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="begin..rescue" type="application/atom+xml">
+  <link href='http://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="logo">
+  	<div id="logoLeft">{</div>
+  	<div id="logoText">lambda</div>
+  	<div id="logoRight">}</div>
+  	<div class="clear"></div>
+  </div>
+  <h1><a href="/">begin..rescue</a></h1>
+  
+    <h2>Programar é legal pra %!$#%*&$!#%</h2>
+  
+  <div class="clear"></div>
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:rudywseidinger.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Procurar..."/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/about.html">About me</a></li>
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+        <h1 class="entry-title">Rails - Controllers X Lógica De Domíno</h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-09-25T20:10:00-03:00" pubdate data-updated="true">Sep 25<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Muitas vezes, em um projeto em Rails, nos vemos encorajados a escrever parte da lógica da aplicação em nossos controllers. Talvez isso acontença, principalmente, pelo fato da grande maioria dos exemplos existentes na internet e literatura (de Rails) não mostrar preocupação com a arquitetura da aplicação (até pelo foco nestes casos ser a tecnologia, em si).</p>
+
+<p>Acho que essa falta de precupação com design mais rico se justifica na maioria dos casos, onde a aplicação é pequena, o escopo do projeto é bem limitado ou existe uma necessidade imediata de lançar um produto ao público (como acontece em muitas startups - e nada impede um &#8216;refactoring&#8217; posterior, mas isto é outra estória&#8230;). Existem, porém, outros casos&#8230; Aplicações grandes, complexas ou onde a criticidade das informações é elevada, requerem cuidados maiores com o design da solução (ou não&#8230; dependendo de quão suicida o time for!).</p>
+
+<p>Após trabalhar em algumas aplicações grandes escritas em Rails (apps com mais de 15.000 linhas de código), muitas coisas que passariam despercebidas em alguns casos, tornam-se evidentes, principalmente quando modificações são necessárias:  implementação de nova funcionalidade, refactoring ou correção de bugs&#8230;</p>
+
+<p>Abaixo segue um exemplo de extração de objetos e lógica de domínio do controller:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">class</span> <span class="nc">PedidosController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">cancelar_pedido</span>
+</span><span class='line'>      <span class="vi">@pedido</span>  <span class="o">=</span> <span class="no">Pedido</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>      <span class="vi">@estoque</span> <span class="o">=</span> <span class="no">Estoque</span><span class="o">.</span><span class="n">find_by_loja</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:loja_id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>      <span class="vi">@pedido</span><span class="o">.</span><span class="n">data_cancelamento</span> <span class="o">=</span> <span class="no">Date</span><span class="o">.</span><span class="n">today</span>
+</span><span class='line'>      <span class="vi">@pedido</span><span class="o">.</span><span class="n">save</span>
+</span><span class='line'>      <span class="no">GatewayDePagamento</span><span class="o">.</span><span class="n">estornar_pagamento</span><span class="p">(</span><span class="vi">@pedido</span><span class="o">.</span><span class="n">pagamento</span><span class="p">)</span> <span class="k">if</span> <span class="vi">@pedido</span><span class="o">.</span><span class="n">pagamento</span>
+</span><span class='line'>      <span class="vi">@estoque</span><span class="o">.</span><span class="n">estornar_estoque_por_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>      <span class="no">NotificacaoDeUsuarios</span><span class="o">.</span><span class="n">notificar_cancelamento_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span> <span class="c1">#classe que herda de ActionMailer::Base</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>    <span class="o">.</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>O principal problema existente neste controller é que ele, enquanto camada de parte da camada de visualização, têm conhecimento de como aplicar uma regra de negócio (além de outros problemas de design, como testabilidade, violação SOLID, enfim, este não é o foco no post).</p>
+
+<p>A &#8216;regra de negócio&#8217;, enquanto parte de maior importância no sistema, devia estar isolada, independente de como é implementada sua parte &#8220;visual&#8221;.</p>
+
+<p>Imagine, neste cenário, que será necessário fornecer esta mesma funcionalidade via WebService SOAP. É fácil copiar e colar este código no &#8220;handle&#8221; do request via SOAP, não?!?
+É fácil até que exista um novo requerimento ou que seja necessário uma adição/modificação do que existe.  Por exemplo, surge a necessidade de que pedidos cancelados devem notificar o departamento de vendas&#8230;
+2 lugares para modificar, maiores as chances de que algo seja esquecido no caminho, fora os outros problemas anteriormente descritos&#8230;</p>
+
+<p>Então, para evitar estes problemas, podemos seguir a seguinte abordagem:</p>
+
+<p>1) Extraímos a lógica de cancelamento e notificação para um objeto (&#8220;Domain Service&#8221;, se quisermos definir assim, segundo concepções do DDD):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">CancelamentoDePedidos</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">pedido</span><span class="p">,</span> <span class="n">estoque</span><span class="p">,</span> <span class="n">gateway_pagamento</span><span class="o">=</span><span class="no">GatewayDePagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@pedido</span> <span class="o">=</span> <span class="n">pedido</span>
+</span><span class='line'>    <span class="vi">@estoque</span> <span class="o">=</span> <span class="n">estoque</span>
+</span><span class='line'>    <span class="vi">@gateway_pagamento</span> <span class="o">=</span> <span class="n">gateway_pagamento</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">proceder_com_cancelamento</span>
+</span><span class='line'>    <span class="c1">#os dois métodos abaixo em Pedido serão descritos logo mais</span>
+</span><span class='line'>    <span class="vi">@pedido</span><span class="o">.</span><span class="n">cancelar</span>
+</span><span class='line'>    <span class="vi">@pedido</span><span class="o">.</span><span class="n">estornar_pagamento_usando</span><span class="p">(</span><span class="vi">@gateway_pagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@estoque</span><span class="o">.</span><span class="n">estornar_estoque_por_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>    <span class="c1"># A decisão de manter este código no serviço vai depender de </span>
+</span><span class='line'>    <span class="c1"># quão importante é para o caso de uso de &quot;Cancelar Pedido&quot;</span>
+</span><span class='line'>    <span class="c1"># esta notificação. Neste caso, trata-se como parte fundamental </span>
+</span><span class='line'>    <span class="c1"># dele</span>
+</span><span class='line'>    <span class="no">NotificacaoDeUsuarios</span><span class="o">.</span><span class="n">notificar_cancelamento_pedido</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>
+2) Adicionamos a manipulação dos atributos internos relativos ao cancelamento de pedidos ao próprio pedido, que deveria ter este conhecimento.:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Pedido</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">cancelar</span>
+</span><span class='line'>    <span class="nb">self</span><span class="o">.</span><span class="n">data_cancelamento</span> <span class="o">=</span> <span class="no">Date</span><span class="o">.</span><span class="n">today</span>
+</span><span class='line'>    <span class="nb">self</span><span class="o">.</span><span class="n">save</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">estornar_pagamento_usando</span><span class="p">(</span><span class="n">gateway_pagamento</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">gateway_pagamento</span><span class="o">.</span><span class="n">estornar_pagamento</span><span class="p">(</span><span class="nb">self</span><span class="o">.</span><span class="n">pagamento</span><span class="p">)</span> <span class="k">if</span> <span class="n">esta_pago?</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">esta_pago?</span>
+</span><span class='line'>    <span class="o">!</span><span class="n">pagamento</span><span class="o">.</span><span class="n">nil?</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p></p>
+
+<p>3) Por último, modificamos nosso controller:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">PedidosController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">cancelar_pedido</span>
+</span><span class='line'>    <span class="vi">@pedido</span>  <span class="o">=</span> <span class="no">Pedido</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@estoque</span> <span class="o">=</span> <span class="no">Estoque</span><span class="o">.</span><span class="n">find_by_loja</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:loja_id</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="no">CancelamentoDePedidos</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="vi">@pedido</span><span class="p">,</span> <span class="vi">@estoque</span><span class="p">)</span><span class="o">.</span><span class="n">proceder_com_cancelamento</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'>  <span class="o">.</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Acho que a idéia é mais ou menos essa&#8230; Com esse pequeno (e fácil!) refactoring do controller, explicitamos o caso de uso mencioando e nosso controller passa a ser somente um consumidor de nossa API para cancelamento de pedidos!!! Parece razoável (apesar de ainda ser possível melhorar isso)&#8230;</p>
+
+<p>O livro do Eric Evans - &#8220;Domain Driven Design - tackling complexity in the heart of software&#8221; é, na minha opinião, um livro um pouco difícil de ser lido e &#8220;digerido&#8221;, porém consegue fornecer um insumo suficiente para desenvolver software com um &#8220;mindset&#8221; que prima a representação em código do negócio de nossos clientes.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">By <span class="fn">Rudy Seidinger Jr</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-09-25T20:10:00-03:00" pubdate data-updated="true">Sep 25<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/controller/'>controller</a>, <a class='category' href='/blog/categories/ddd/'>ddd</a>, <a class='category' href='/blog/categories/design/'>design</a>, <a class='category' href='/blog/categories/domain-model/'>domain model</a>, <a class='category' href='/blog/categories/domain-services/'>domain services</a>, <a class='category' href='/blog/categories/rails/'>rails</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://rudywseidinger.github.com/blog/2012/09/25/rails-controllers-x-domain-logic/" data-via="" data-counturl="http://rudywseidinger.github.com/blog/2012/09/25/rails-controllers-x-domain-logic/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left articlenav" href="/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/" title="Previous Post: Usando o 'assets pipeline' + compressão de Javascript com AngularJS">&laquo; Usando o 'assets pipeline' + compressão de Javascript com AngularJS</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2012/09/25/rails-controllers-x-domain-logic/">Rails - Controllers x Lógica de domíno</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/09/20/using-asset-pipeline-and-js-compression-with-angularjs/">Usando o 'assets pipeline' + compressão de Javascript com AngularJS</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/29/git-a-few-tips-to-survive-in-the-git-world/">Sobrevivendo ao mundo GIT - 1</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/09/cause-everything-starts-from-something-dot-dot-dot/">Cause everything starts from something...</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2012 - <a href="http://github.com/rudywseidinger">Rudy Seidinger Jr</a> -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-33979185-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+</body>
+</html>
